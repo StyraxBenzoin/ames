@@ -13,10 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+
+# Updated 2024-12-17 to change to gnome-screenshot for use with Wayland. 
+# To remove the annoying shutter sound do `sudo rm -f /usr/share/sounds/freedesktop/stereo/camera-shutter.oga` or rename it if you want to preserve it.
+
 set -euo pipefail
 
-AUDIO_FIELD="audio"
-SCREENSHOT_FIELD="image"
+AUDIO_FIELD="SentenceAudio"
+SCREENSHOT_FIELD="Picture"
 SENTENCE_FIELD="Sentence"
 # leave OUTPUT_MONITOR blank to autoselect a monitor.
 OUTPUT_MONITOR=""
@@ -289,42 +293,15 @@ encode_img() {
         "$dest_path"
 }
 
-get_selection() {
-    # get a region of the screen for future screenshotting.
-    slop
-}
-
-take_screenshot_region() {
-    # function to take a screenshot of a given screen region.
-    # $1 is the geometry of the region from get_selection().
-    # $2 is the output file name.
-    local -r geom="$1"
-    local -r path="$2"
-    maim --hidecursor "$path" -g "$geom"
-}
-
-take_screenshot_window() {
-    # function to take a screenshot of the current window.
-    # $1 is the output file name.
-    local -r path="$1"
-    maim --hidecursor "$path" -i "$(xdotool getactivewindow)"
-}
-
 screenshot() {
-    # take a screenshot by prompting the user for a selection
+    # Take a screenshot by prompting the user for a selection
     # and then add this image to the last Anki card.
-    local -r geom="$(get_selection)"
-    local -r path="$(mktemp /tmp/maim-screenshot.XXXXXX.png)"
-    local -r base_path="$(basename -- "$path" | cut -d "." -f-2)"
-    local -r converted_path="/tmp/$base_path.$IMAGE_FORMAT"
-
-    take_screenshot_region "$geom" "$path"
-    encode_img "$path" "$converted_path"
-
-    rm "$path"
-    echo "$geom" >/tmp/previous-maim-screenshot
-    store_file "$converted_path"
-    update_img "$(basename -- "$converted_path")"
+    local -r path="$(mktemp /tmp/gnome-screenshot.XXXXXX.png)"
+    gnome-screenshot -a -f "$path"
+    
+    # Assuming the screenshot is saved in the specified path
+    store_file "$path"
+    update_img "$(basename -- "$path")"
     notify_screenshot_add
 }
 
@@ -350,15 +327,13 @@ again() {
 }
 
 screenshot_window() {
-    # take a screenshot of the active window and add to the last Anki card.
-    local -r path="$(mktemp /tmp/maim-screenshot.XXXXXX.png)"
-    local -r base_path="$(basename -- "$path" | cut -d "." -f-2)"
-    local -r converted_path="/tmp/$base_path.$IMAGE_FORMAT"
-    take_screenshot_window "$path"
-    encode_img "$path" "$converted_path"
-    rm "$path"
-    store_file "$converted_path"
-    update_img "$(basename -- "$converted_path")"
+    # Take a screenshot of the active window and add to the last Anki card.
+    local -r path="$(mktemp /tmp/gnome-screenshot.XXXXXX.png)"
+    gnome-screenshot -w -f "$path"
+    
+    # Assuming the screenshot is saved in the specified path
+    store_file "$path"
+    update_img "$(basename -- "$path")"
     notify_screenshot_add
 }
 
